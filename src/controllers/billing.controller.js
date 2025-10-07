@@ -25,9 +25,56 @@ const createBilling = asyncHandler(async (req, res) => {
   }
 
   if (appointmentId) {
-    const existingBilling = await prisma.billing.findUnique({ where: { appointmentId } });
+    const existingBilling = await prisma.billing.findUnique({
+      where: { appointmentId },
+      include: {
+        patient: true,
+        appointment: true
+      }
+    });
+
     if (existingBilling) {
-      return res.status(409).json({ message: 'Billing already exists for this appointment' });
+      if (existingBilling.patientId !== patientId) {
+        return res.status(400).json({ message: 'Appointment is linked to a different patient' });
+      }
+
+      const total = totalAmount !== undefined ? toDecimal(totalAmount) : existingBilling.totalAmount;
+      const paid = paidAmount !== undefined ? toDecimal(paidAmount) : existingBilling.paidAmount;
+
+      if (paid.greaterThan(total)) {
+        return res.status(400).json({ message: 'paidAmount cannot exceed totalAmount' });
+      }
+
+      const updated = await prisma.billing.update({
+        where: { id: existingBilling.id },
+        data: {
+          paymentMode: paymentMode || existingBilling.paymentMode,
+          totalAmount: total,
+          paidAmount: paid,
+          outstandingBalance: total.minus(paid),
+          status: status || computeStatus(total, paid)
+        },
+        include: {
+          patient: true,
+          appointment: true
+        }
+      });
+
+      await AuditService.log({
+        userId: req.user.id,
+        userRole: req.user.role,
+        action: 'UPDATE',
+        entityType: 'Billing',
+        entityId: updated.id,
+        changes: {
+          old: existingBilling,
+          new: updated
+        },
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+
+      return res.json({ data: updated });
     }
   }
 
