@@ -1,0 +1,284 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum EmployeeRole {
+  RECEPTIONIST
+  DOCTOR
+  PHARMACIST
+  ACCOUNTANT
+  ADMIN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CHECKED_IN
+  COMPLETED
+  CANCELLED
+}
+
+enum BillingStatus {
+  DRAFT
+  PAID
+  PARTIALLY_PAID
+}
+
+enum PaymentMode {
+  CASH
+  INSURANCE
+  NHIF
+  MPESA
+}
+
+enum NotificationRecipientType {
+  EMPLOYEE
+  PATIENT
+}
+
+enum NotificationType {
+  APPOINTMENT_REMINDER
+  APPOINTMENT_CREATED
+  APPOINTMENT_CANCELLED
+  PAYMENT_CONFIRMATION
+  LAB_RESULT_READY
+  PRESCRIPTION_READY
+  LOW_STOCK_ALERT
+  EXPIRING_STOCK_ALERT
+}
+
+enum NotificationChannel {
+  IN_APP
+  SMS
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  READ
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  VIEW
+  LOGIN
+  LOGOUT
+}
+
+enum StockTransactionType {
+  IN
+  OUT
+}
+
+enum LabOrderStatus {
+  PENDING
+  COMPLETED
+}
+
+model Patient {
+  id               String         @id @default(cuid())
+  fullName         String
+  gender           String
+  dateOfBirth      DateTime
+  phone            String         @unique
+  email            String?        @unique
+  idNumber         String?        @unique
+  nhifNumber       String?
+  address          String?
+  emergencyContact Json?
+  medicalHistory   String?
+  appointments     Appointment[]
+  prescriptions    Prescription[]
+  labOrders        LabOrder[]
+  billings         Billing[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model Employee {
+  id            String         @id @default(cuid())
+  fullName      String
+  role          EmployeeRole
+  department    String?
+  phone         String?
+  email         String        @unique
+  password      String
+  appointments  Appointment[] @relation("DoctorAppointments")
+  prescriptions Prescription[]
+  labOrders     LabOrder[]    @relation("LabOrders")
+  dispensedPrescriptions Prescription[] @relation("PrescriptionDispensedBy")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Appointment {
+  id            String            @id @default(cuid())
+  patientId     String
+  doctorId      String
+  department    String
+  date          DateTime
+  time          String
+  status        AppointmentStatus @default(SCHEDULED)
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  patient       Patient           @relation(fields: [patientId], references: [id])
+  doctor        Employee          @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  billing       Billing?          @relation("AppointmentBilling")
+  prescriptions Prescription[]
+
+  @@unique([doctorId, date, time])
+  @@index([patientId])
+}
+
+model Billing {
+  id                 String          @id @default(cuid())
+  patientId          String
+  appointmentId      String?         @unique
+  paymentMode        PaymentMode
+  totalAmount        Decimal         @db.Decimal(12, 2)
+  paidAmount         Decimal         @default(0) @db.Decimal(12, 2)
+  outstandingBalance Decimal         @default(0) @db.Decimal(12, 2)
+  status             BillingStatus   @default(DRAFT)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  patient            Patient         @relation(fields: [patientId], references: [id])
+  appointment        Appointment?    @relation("AppointmentBilling", fields: [appointmentId], references: [id])
+  payments           BillingPayment[]
+}
+
+model BillingPayment {
+  id        String      @id @default(cuid())
+  billingId String
+  amount    Decimal     @db.Decimal(12, 2)
+  method    PaymentMode
+  reference String?
+  paidAt    DateTime    @default(now())
+  createdAt DateTime    @default(now())
+  billing   Billing     @relation(fields: [billingId], references: [id], onDelete: Cascade)
+
+  @@index([billingId])
+}
+
+model Prescription {
+  id            String             @id @default(cuid())
+  patientId     String
+  appointmentId String?
+  doctorId      String
+  notes         String?
+  dispensed     Boolean            @default(false)
+  dispensedAt   DateTime?
+  dispensedBy   String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  patient       Patient            @relation(fields: [patientId], references: [id])
+  appointment   Appointment?       @relation(fields: [appointmentId], references: [id])
+  doctor        Employee           @relation(fields: [doctorId], references: [id])
+  dispensedByUser Employee?        @relation("PrescriptionDispensedBy", fields: [dispensedBy], references: [id])
+  items         PrescriptionItem[]
+}
+
+model PrescriptionItem {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  itemId         String
+  quantity       Int
+  dosage         String
+  frequency      String
+  duration       String
+  instructions   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  item           Item         @relation(fields: [itemId], references: [id])
+
+  @@index([itemId])
+}
+
+model LabOrder {
+  id           String        @id @default(cuid())
+  patientId    String
+  orderedBy    String
+  testType     String
+  notes        String?
+  result       String?
+  status       LabOrderStatus @default(PENDING)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  patient      Patient        @relation(fields: [patientId], references: [id])
+  orderedByUser Employee      @relation("LabOrders", fields: [orderedBy], references: [id])
+}
+
+model Item {
+  id                  String              @id @default(cuid())
+  name                String
+  category            String?
+  unit                String?
+  batchNumber         String?
+  expiryDate          DateTime?
+  stock               Int                 @default(0)
+  reorderLevel        Int                 @default(0)
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  prescriptionItems   PrescriptionItem[]
+  stockTransactions   StockTransaction[]
+
+  @@index([expiryDate])
+}
+
+model StockTransaction {
+  id        String               @id @default(cuid())
+  itemId    String
+  type      StockTransactionType
+  quantity  Int
+  balance   Int
+  reference String?
+  createdAt DateTime             @default(now())
+  item      Item                 @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  @@index([itemId])
+}
+
+model Notification {
+  id            String                     @id @default(uuid())
+  recipientId   String
+  recipientType NotificationRecipientType
+  type          NotificationType
+  title         String
+  message       String
+  data          Json?
+  channel       NotificationChannel
+  status        NotificationStatus        @default(PENDING)
+  sentAt        DateTime?
+  readAt        DateTime?
+  createdAt     DateTime                  @default(now())
+
+  @@index([recipientId])
+  @@index([status])
+  @@index([type])
+}
+
+model AuditLog {
+  id         String      @id @default(uuid())
+  userId     String
+  userRole   String
+  action     AuditAction
+  entityType String
+  entityId   String?
+  changes    Json?
+  ipAddress  String?
+  userAgent  String?
+  timestamp  DateTime    @default(now())
+
+  @@index([userId])
+  @@index([entityType])
+  @@index([timestamp])
+}
