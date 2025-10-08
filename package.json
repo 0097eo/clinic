@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "echo \"No test suite configured\""
+    "test": "cross-env NODE_ENV=test jest --runInBand"
   },
   "repository": {
     "type": "git",
@@ -39,6 +39,9 @@
   "devDependencies": {
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.0",
+    "cross-env": "^10.1.0",
+    "jest": "^30.2.0",
+    "light-my-request": "^6.6.0",
     "nodemon": "^3.1.10",
     "typescript": "^5.9.3"
   }
