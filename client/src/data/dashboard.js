@@ -5,7 +5,7 @@ export const quickStats = [
     value: 0,
     delta: null,
     trend: null,
-    accent: '#6366f1'
+    accent: '#1f5b8f'
   },
   {
     id: 'appointments',
@@ -13,7 +13,7 @@ export const quickStats = [
     value: 0,
     delta: null,
     trend: null,
-    accent: '#0ea5e9'
+    accent: '#0b8ca8'
   },
   {
     id: 'revenue',
@@ -21,7 +21,7 @@ export const quickStats = [
     value: 'KES 0',
     delta: null,
     trend: null,
-    accent: '#22c55e'
+    accent: '#2f855a'
   },
   {
     id: 'satisfaction',
@@ -29,7 +29,7 @@ export const quickStats = [
     value: '0%',
     delta: null,
     trend: null,
-    accent: '#f97316'
+    accent: '#b7791f'
   }
 ];
 

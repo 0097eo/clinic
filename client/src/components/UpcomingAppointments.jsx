@@ -1,8 +1,8 @@
 const statusConfig = {
-  CHECKED_IN: { label: 'Checked-in', color: '#22c55e' },
-  SCHEDULED: { label: 'Scheduled', color: '#6366f1' },
-  COMPLETED: { label: 'Completed', color: '#0ea5e9' },
-  CANCELLED: { label: 'Cancelled', color: '#ef4444' }
+  CHECKED_IN: { label: 'Checked-in', color: '#2f855a' },
+  SCHEDULED: { label: 'Scheduled', color: '#1f5b8f' },
+  COMPLETED: { label: 'Completed', color: '#0b8ca8' },
+  CANCELLED: { label: 'Cancelled', color: '#c53030' }
 };
 
 export function UpcomingAppointments({ items }) {
@@ -26,7 +26,7 @@ export function UpcomingAppointments({ items }) {
               </p>
             </div>
             {(() => {
-              const config = statusConfig[appointment.status] || { label: appointment.status, color: '#0f172a' };
+              const config = statusConfig[appointment.status] || { label: appointment.status, color: '#1f2736' };
               return (
                 <span
                   className="appointments__status"
