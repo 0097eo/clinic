@@ -1086,10 +1086,26 @@
 }
 
 .appointments__time {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
   font-family: 'Poppins', sans-serif;
+  color: var(--color-primary);
+}
+
+.appointments__hour {
   font-weight: 600;
   font-size: 1rem;
-  color: var(--color-primary);
+}
+
+.appointments__date {
+  font-family: 'Inter', sans-serif;
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 .appointments__name {

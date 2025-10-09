@@ -18,7 +18,10 @@ export function UpcomingAppointments({ items }) {
       <div className="appointments__list">
         {items.map((appointment) => (
           <article key={appointment.id} className="appointments__item">
-            <div className="appointments__time">{appointment.time}</div>
+            <div className="appointments__time">
+              <span className="appointments__date">{appointment.date}</span>
+              <span className="appointments__hour">{appointment.time}</span>
+            </div>
             <div className="appointments__details">
               <p className="appointments__name">{appointment.name}</p>
               <p className="appointments__meta">

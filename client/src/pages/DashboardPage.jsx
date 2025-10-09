@@ -34,28 +34,19 @@ export function DashboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const today = new Date();
-        const todayParam = today.toISOString().split('T')[0];
+        const now = new Date();
 
-        const [
-          patientsTotal,
-          todaysAppointments,
-          scheduledAppointments,
-          totalAppointments,
-          completedAppointments,
-          billingSummary
-        ] = await Promise.all([
-          getPatientCount(token),
-          getAppointments({ date: todayParam, pageSize: 1 }, token),
-          getAppointments({ status: 'SCHEDULED', pageSize: 10 }, token),
-          getAppointments({ pageSize: 1 }, token),
-          getAppointments({ status: 'COMPLETED', pageSize: 1 }, token),
-          getBilling({ pageSize: 100 }, token)
-        ]);
+        const [patientsTotal, scheduledAppointments, totalAppointments, completedAppointments, billingSummary] =
+          await Promise.all([
+            getPatientCount(token),
+            getAppointments({ status: 'SCHEDULED', pageSize: 50 }, token),
+            getAppointments({ pageSize: 1 }, token),
+            getAppointments({ status: 'COMPLETED', pageSize: 1 }, token),
+            getBilling({ pageSize: 100 }, token)
+          ]);
 
         if (!active) return;
 
-        const todaysCount = todaysAppointments?.pagination?.total ?? 0;
         const totalCount = totalAppointments?.pagination?.total ?? 0;
         const completedCount = completedAppointments?.pagination?.total ?? 0;
 
@@ -63,8 +54,8 @@ export function DashboardPage() {
           const createdAt = bill.createdAt ? new Date(bill.createdAt) : null;
           if (
             createdAt &&
-            createdAt.getMonth() === today.getMonth() &&
-            createdAt.getFullYear() === today.getFullYear()
+            createdAt.getMonth() === now.getMonth() &&
+            createdAt.getFullYear() === now.getFullYear()
           ) {
             const amount = Number(bill.paidAmount ?? 0);
             return acc + (Number.isFinite(amount) ? amount : Number(bill.paidAmount?.toString() ?? 0));
@@ -74,6 +65,23 @@ export function DashboardPage() {
 
         const satisfactionPercent =
           totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+
+        const upcomingAppointments = (scheduledAppointments?.data ?? [])
+          .map((entry) => {
+            const appointmentDate = entry.date ? new Date(entry.date) : new Date();
+            if (entry.time) {
+              const [hours, minutes] = entry.time.split(':');
+              appointmentDate.setHours(Number(hours) || 0, Number(minutes) || 0, 0, 0);
+            }
+            return {
+              entry,
+              dateTime: appointmentDate
+            };
+          })
+          .filter(({ dateTime }) => dateTime.getTime() >= now.getTime())
+          .sort((a, b) => a.dateTime - b.dateTime);
+
+        const upcomingCount = upcomingAppointments.length;
 
         setStats((prev) =>
           prev.map((item) => {
@@ -88,7 +96,7 @@ export function DashboardPage() {
               case 'appointments':
                 return {
                   ...item,
-                  value: todaysCount.toLocaleString(),
+                  value: upcomingCount.toLocaleString(),
                   delta: null,
                   trend: null
                 };
@@ -112,25 +120,20 @@ export function DashboardPage() {
           })
         );
 
-        const appointmentItems = (scheduledAppointments?.data ?? [])
-          .map((entry) => {
-            const baseDate = entry.date ? new Date(entry.date) : new Date(today);
-            if (entry.time) {
-              const [hours, minutes] = entry.time.split(':');
-              baseDate.setHours(Number(hours) || 0, Number(minutes) || 0);
-            }
-            return {
-              id: entry.id,
-              dateTime: baseDate,
-              time: baseDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              name: entry.patient?.fullName ?? 'Unknown patient',
-              type: entry.department ?? 'General',
-              doctor: entry.doctor?.fullName ? `Dr. ${entry.doctor.fullName}` : 'Clinic Team',
-              status: entry.status ?? 'SCHEDULED'
-            };
-          })
-          .sort((a, b) => a.dateTime - b.dateTime)
-          .slice(0, 6);
+        const appointmentItems = upcomingAppointments.slice(0, 6).map(({ entry, dateTime }) => {
+          const localeOptions = { weekday: 'short', month: 'short', day: 'numeric' };
+          const dateLabel = dateTime.toLocaleDateString(undefined, localeOptions);
+          return {
+            id: entry.id,
+            dateTime,
+            time: dateTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            date: dateLabel,
+            name: entry.patient?.fullName ?? 'Unknown patient',
+            type: entry.department ?? 'General',
+            doctor: entry.doctor?.fullName ? `Dr. ${entry.doctor.fullName}` : 'Clinic Team',
+            status: entry.status ?? 'SCHEDULED'
+          };
+        });
 
         setAppointments(appointmentItems);
 

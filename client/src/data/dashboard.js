@@ -9,7 +9,7 @@ export const quickStats = [
   },
   {
     id: 'appointments',
-    label: 'Appointments Today',
+    label: 'Upcoming Appointments',
     value: 0,
     delta: null,
     trend: null,
