@@ -7,6 +7,7 @@ const { request } = require('./helpers/request');
 
 describe('Auth routes', () => {
   it('registers a new employee', async () => {
+    mockPrisma.employee.count.mockResolvedValueOnce(0);
     mockPrisma.employee.findUnique.mockResolvedValueOnce(null);
 
     const newEmployee = {
@@ -145,6 +146,155 @@ describe('Auth routes', () => {
       expect.objectContaining({
         action: 'LOGOUT',
         userId: currentUser.id
+      })
+    );
+  });
+
+  it('requires admin role to register additional employees', async () => {
+    const currentUser = {
+      id: 'emp-350',
+      role: 'DOCTOR',
+      fullName: 'Dr. Who',
+      email: 'doctor@example.com'
+    };
+
+    mockPrisma.employee.count.mockResolvedValueOnce(3);
+    mockPrisma.employee.findUnique
+      .mockResolvedValueOnce(currentUser) // authenticate optional middleware
+      .mockResolvedValueOnce(null); // ensure email unused
+
+    const token = signToken({ id: currentUser.id, role: currentUser.role });
+    const response = await request(app, {
+      method: 'POST',
+      url: '/api/auth/register',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        fullName: 'Nurse Nancy',
+        email: 'nancy@example.com',
+        password: 'Password123!',
+        role: 'RECEPTIONIST'
+      }
+    });
+
+    expect(response.status).toBe(403);
+    expect(mockPrisma.employee.create).not.toHaveBeenCalled();
+  });
+
+  it('returns the authenticated employee profile', async () => {
+    const currentUser = {
+      id: 'emp-400',
+      role: 'ACCOUNTANT',
+      fullName: 'Paula Pay',
+      email: 'paula@example.com'
+    };
+
+    mockPrisma.employee.findUnique
+      .mockResolvedValueOnce(currentUser) // authenticate
+      .mockResolvedValueOnce(currentUser); // controller lookup
+
+    const token = signToken({ id: currentUser.id, role: currentUser.role });
+    const response = await request(app, {
+      method: 'GET',
+      url: '/api/auth/me',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(
+      expect.objectContaining({
+        id: currentUser.id,
+        fullName: currentUser.fullName,
+        email: currentUser.email,
+        role: currentUser.role
+      })
+    );
+    expect(response.body.data).not.toHaveProperty('password');
+  });
+
+  it('updates the employee profile', async () => {
+    const currentUser = {
+      id: 'emp-500',
+      role: 'PHARMACIST',
+      fullName: 'Phil Pharma',
+      email: 'phil@example.com',
+      phone: '+254700000999',
+      department: 'Pharmacy'
+    };
+
+    const updated = {
+      ...currentUser,
+      fullName: 'Phillip Pharma'
+    };
+
+    mockPrisma.employee.findUnique
+      .mockResolvedValueOnce(currentUser) // authenticate
+      .mockResolvedValueOnce(currentUser); // load current profile
+    mockPrisma.employee.update.mockResolvedValueOnce(updated);
+
+    const token = signToken({ id: currentUser.id, role: currentUser.role });
+    const response = await request(app, {
+      method: 'PUT',
+      url: '/api/auth/me',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        fullName: 'Phillip Pharma'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(mockPrisma.employee.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: currentUser.id },
+        data: expect.objectContaining({ fullName: 'Phillip Pharma' })
+      })
+    );
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'UPDATE',
+        entityType: 'Employee',
+        entityId: currentUser.id
+      })
+    );
+  });
+
+  it('changes the employee password', async () => {
+    const currentUser = {
+      id: 'emp-600',
+      role: 'ADMIN',
+      fullName: 'Carol Control',
+      email: 'carol@example.com',
+      password: 'hashed-password'
+    };
+
+    mockPrisma.employee.findUnique
+      .mockResolvedValueOnce(currentUser) // authenticate
+      .mockResolvedValueOnce(currentUser); // load for password check
+
+    const token = signToken({ id: currentUser.id, role: currentUser.role });
+    const response = await request(app, {
+      method: 'PATCH',
+      url: '/api/auth/change-password',
+      headers: { Authorization: `Bearer ${token}` },
+      body: {
+        currentPassword: 'Clinic123!',
+        newPassword: 'Clinic456!'
+      }
+    });
+
+    expect(response.status).toBe(200);
+    expect(comparePassword).toHaveBeenCalledWith('Clinic123!', currentUser.password);
+    expect(hashPassword).toHaveBeenCalledWith('Clinic456!');
+    expect(mockPrisma.employee.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: currentUser.id },
+        data: { password: 'hashed-password' }
+      })
+    );
+    expect(auditService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'UPDATE',
+        entityType: 'Employee',
+        entityId: currentUser.id
       })
     );
   });
