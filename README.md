@@ -43,6 +43,7 @@ Node.js / Express based backend for managing patients, appointments, billing, pr
    ```bash
    npx prisma migrate dev --name init
    npx prisma generate
+   npm run seed
    ```
 4. **Run development server**
    ```bash
@@ -80,6 +81,26 @@ CLIENT_URL=http://localhost:5173
 - `npm start` – start the server with Node
 - `npm test` – run the Jest suite (mocked dependencies; no DB needed)
 
+## Frontend (React Dashboard)
+
+A companion dashboard inspired by the HealthMate design is located in the `client/` directory and is built with Vite + React.
+
+```bash
+cd client
+npm install           # already executed when scaffolding
+npm run dev           # start development server on http://localhost:5173
+npm run build         # generate production bundle
+```
+
+Set `VITE_API_URL` in `client/.env` to point at the running API (defaults to `http://localhost:3000/api`). Sign in with the seeded admin account (`admin@clinicmate.ke` / `Clinic123!`) or any other employee credential; the UI hydrates live metrics (patients, appointments, billing, prescriptions, lab orders, inventory, notifications, audit logs) and falls back to demo data only if the API is unreachable.
+
+Role-based navigation and CRUD:
+- **Admin** – full access across all modules, audit trail visibility, inventory/billing management.
+- **Receptionist** – patient registry and appointment scheduling/status updates.
+- **Doctor** – patient viewing, appointments, prescriptions (create), lab orders (create/result entry).
+- **Pharmacist** – prescriptions dispensing and inventory management.
+- **Accountant** – billing dashboard and payment recording.
+
 ## Testing
 
 Endpoint coverage is provided by Jest. Tests live under `tests/` and use a mocked Prisma client plus in-memory request injection. See `docs/testing.md` for a detailed guide on the test harness and for instructions on writing additional tests.
@@ -95,6 +116,7 @@ Endpoint coverage is provided by Jest. Tests live under `tests/` and use a mocke
 
 - API walkthrough: `docs/api.md`
 - Test documentation: `docs/testing.md`
+- Frontend design notes: `client/README.md`
 
 ## Continuous Integration
 
