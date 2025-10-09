@@ -36,19 +36,18 @@ export function DashboardPage() {
       try {
         const now = new Date();
 
-        const [patientsTotal, scheduledAppointments, totalAppointments, completedAppointments, billingSummary] =
-          await Promise.all([
-            getPatientCount(token),
-            getAppointments({ status: 'SCHEDULED', pageSize: 50 }, token),
-            getAppointments({ pageSize: 1 }, token),
-            getAppointments({ status: 'COMPLETED', pageSize: 1 }, token),
-            getBilling({ pageSize: 100 }, token)
-          ]);
+        const [patientsTotal, scheduledAppointments, totalAppointments, completedAppointmentsResponse, billingSummary] = await Promise.all([
+          getPatientCount(token),
+          getAppointments({ status: 'SCHEDULED', pageSize: 50 }, token),
+          getAppointments({ pageSize: 1 }, token),
+          getAppointments({ status: 'COMPLETED', pageSize: 1 }, token),
+          getBilling({ pageSize: 100 }, token)
+        ]);
 
         if (!active) return;
 
         const totalCount = totalAppointments?.pagination?.total ?? 0;
-        const completedCount = completedAppointments?.pagination?.total ?? 0;
+        const completedCount = completedAppointmentsResponse?.pagination?.total ?? 0;
 
         const monthlyRevenue = (billingSummary?.data ?? []).reduce((acc, bill) => {
           const createdAt = bill.createdAt ? new Date(bill.createdAt) : null;

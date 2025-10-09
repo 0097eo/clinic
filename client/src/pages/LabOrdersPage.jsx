@@ -28,7 +28,6 @@ export function LabOrdersPage() {
 
   const columns = useMemo(() => {
     const base = [
-      { header: 'ID', accessor: 'id' },
       { header: 'Patient', accessor: 'patientName' },
       { header: 'Ordered By', accessor: 'orderedBy' },
       { header: 'Test Type', accessor: 'testType' },

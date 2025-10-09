@@ -193,6 +193,14 @@ export async function getOutstandingBilling(token) {
   return request('/billing/outstanding', { token });
 }
 
+export async function createBilling(payload, token) {
+  return request('/billing', {
+    method: 'POST',
+    body: payload,
+    token
+  });
+}
+
 export async function recordBillingPayment(id, payload, token) {
   return request(`/billing/${id}/payment`, {
     method: 'POST',
