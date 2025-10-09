@@ -17,7 +17,22 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Password is required')
 ];
 
+const updateProfileValidation = [
+  body('fullName').optional().trim().notEmpty().withMessage('fullName cannot be empty'),
+  body('phone').optional().trim().isString(),
+  body('department').optional().trim().isString()
+];
+
+const changePasswordValidation = [
+  body('currentPassword').notEmpty().withMessage('currentPassword is required'),
+  body('newPassword')
+    .isLength({ min: 6 })
+    .withMessage('newPassword must be at least 6 characters long')
+];
+
 module.exports = {
   registerValidation,
-  loginValidation
+  loginValidation,
+  updateProfileValidation,
+  changePasswordValidation
 };
