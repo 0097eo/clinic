@@ -9,6 +9,7 @@ const prescriptionRoutes = require('./prescription.routes');
 const notificationRoutes = require('./notification.routes');
 const labOrderRoutes = require('./labOrder.routes');
 const auditRoutes = require('./audit.routes');
+const employeeRoutes = require('./employee.routes');
 
 const router = Router();
 
@@ -21,5 +22,6 @@ router.use('/prescriptions', prescriptionRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/lab-orders', labOrderRoutes);
 router.use('/audit-logs', auditRoutes);
+router.use('/employees', employeeRoutes);
 
 module.exports = router;
